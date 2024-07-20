@@ -3,6 +3,13 @@ import { Arg, JSIObject, Method, Property } from "./model";
 import { computeDependencies, isAtomicType, isNumberType, objectName, unWrapType } from './common';
 import { isEnum } from "./enums";
 
+const makeSingular = (name: string) => {
+  if (name === "entries") {
+    return "entry";
+  }
+  return name.substring(0, name.length - 1);
+};
+
 const generateArg = (index: number, arg: Arg) => {
   const isArray = arg.type.endsWith("[]");
   const name = _.camelCase(arg.name);
@@ -31,7 +38,7 @@ for (int i = 0; i < jsiArraySize; i++) {
   if (arg.optional) {
     let result = ''
     if (arg.defaultValue) {
-      result += `auto default${_.upperFirst(name)} = std::make_shared<wgpu::${arg.type}>();
+      result += `auto default${_.upperFirst(name)} = new wgpu::${arg.type}();
       `;
     } else if (arg.defaultAtomicValue) {
       result += `${arg.type} default${_.upperFirst(name)} = ${arg.defaultAtomicValue};
@@ -49,14 +56,14 @@ const unwrapArrayMember = (propName: string, arg: Property, index: number) => {
   const jsiName = `jsi${_.upperFirst(name)}`;
   return `auto ${jsiName} = ${propName}.asObject(runtime).asArray(runtime);
 auto ${jsiName}Size = static_cast<int>(${jsiName}.size(runtime));
-std::vector<wgpu::${type}> ${name};
-${name}.reserve(${jsiName}Size);
+auto ${name} = new std::vector<wgpu::${type}>();
+${name}->reserve(${jsiName}Size);
 for (int i = 0; i < ${jsiName}Size; i++) {
   auto element = Jsi${type}::fromValue(
     runtime,
-    ${jsiName}.getValueAtIndex(runtime, i).asObject(runtime)
+    ${jsiName}.getValueAtIndex(runtime, i)
   );
-  ${name}.push_back(*element.get()); 
+  ${name}->push_back(*element); 
 }
 
 `;
@@ -74,11 +81,11 @@ export const wrapReturnValue = (returns: string | undefined) => {
   }
 };
 
-const argList = (args: Arg[]) => args.map(arg => arg.baseType ? `base${_.upperFirst(arg.name)}`:  (isAtomicType(arg.type) || arg.type.endsWith("[]")) ? `${arg.name}` : `*${arg.name}.get()`).join(", ");
+const argList = (args: Arg[]) => args.map(arg => arg.baseType ? `base${_.upperFirst(arg.name)}`:  (isAtomicType(arg.type) || arg.type.endsWith("[]")) ? `${arg.name}` : `*${arg.name}`).join(", ");
 
 const baseType = (arg: Arg) => {
   return `
-auto ${arg.name}Next = *moduleDescriptor.get();
+auto ${arg.name}Next = *moduleDescriptor;
 wgpu::${arg.baseType} base${_.upperFirst(arg.name)};
 base${_.upperFirst(arg.name)}.nextInChain = &${arg.name}Next.chain;`
 };
@@ -132,7 +139,8 @@ const generatorAsyncMethod = (method: Method) => {
 };
 
 const unpackProperties = (name: string, properties: Property[], defaultProperties: string) => {
-  return `auto object = std::make_shared<wgpu::${name}>();
+  return `auto object = new wgpu::${name}();
+object->setDefault();
 ${defaultProperties}
 ${properties.map((property, index) => {
   const propName = _.camelCase(property.name);
@@ -140,8 +148,8 @@ ${properties.map((property, index) => {
   return `if(obj.hasProperty(runtime, "${property.name}")) {
     auto ${propName} = obj.getProperty(runtime, "${property.name}");
   ${isArray ? unwrapArrayMember(propName, property, index) : ''}
-  ${isArray ? `object->${propName.substring(0, propName.length - 1)}Count = jsiArray${index}Size;` : ``}
-  object->${propName} = ${isArray ? `array${index}.data()` : unWrapType(propName, property.type, !!property.pointer)};
+  ${isArray ? `object->${makeSingular(propName)}Count = jsiArray${index}Size;` : ``}
+  object->${propName} = ${isArray ? `array${index}->data()` : unWrapType(propName, property.type, !!property.pointer)};
 }${property.optional ? `` : ` else { throw jsi::JSError(runtime, "Missing mandatory prop ${property.name} in ${name}"); }`}`;
 }).join(`
 `)}
@@ -156,7 +164,7 @@ for (int i = 0; i < jsiArray.size(runtime); i++) {
   array.push_back(jsiArray.getValueAtIndex(runtime, i).asNumber());
 }
 auto data = array.data();
-auto object = std::make_shared<wgpu::${name}>(wgpu::${name}{${new Array(size).fill(0).map((_, i) => `data[${i}]`)}});
+auto object = new wgpu::${name}(wgpu::${name}{${new Array(size).fill(0).map((_, i) => `data[${i}]`)}});
 return object;
   }`;
 };
@@ -209,11 +217,11 @@ ${className}(std::shared_ptr<RNSkPlatformContext> context, ${objectName} m)
   /**
    * Returns the underlying object from a host object of this type
    */
-  static std::shared_ptr<${objectName}> fromValue(jsi::Runtime &runtime,
+  static ${objectName}* fromValue(jsi::Runtime &runtime,
                                              const jsi::Value &raw) {
     const auto &obj = raw.asObject(runtime);
     if (obj.isHostObject(runtime)) {
-      return obj.asHostObject<${className}>(runtime)->getObject();
+      return obj.asHostObject<${className}>(runtime)->getObject().get();
     } else {
     ${object.properties ? `${object.iterable ? unpackArray(object.name, parseInt(object.iterable, 10)) : ''}${unpackProperties(object.name, object.properties, object.defaultProperties ?? "")}` : `throw jsi::JSError(
       runtime,

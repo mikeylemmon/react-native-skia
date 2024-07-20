@@ -34,28 +34,31 @@ public:
   /**
    * Returns the underlying object from a host object of this type
    */
-  static std::shared_ptr<wgpu::RenderPassDescriptor>
-  fromValue(jsi::Runtime &runtime, const jsi::Value &raw) {
+  static wgpu::RenderPassDescriptor *fromValue(jsi::Runtime &runtime,
+                                               const jsi::Value &raw) {
     const auto &obj = raw.asObject(runtime);
     if (obj.isHostObject(runtime)) {
-      return obj.asHostObject<JsiRenderPassDescriptor>(runtime)->getObject();
+      return obj.asHostObject<JsiRenderPassDescriptor>(runtime)
+          ->getObject()
+          .get();
     } else {
-      auto object = std::make_shared<wgpu::RenderPassDescriptor>();
+      auto object = new wgpu::RenderPassDescriptor();
+      object->setDefault();
 
       if (obj.hasProperty(runtime, "colorAttachments")) {
         auto colorAttachments = obj.getProperty(runtime, "colorAttachments");
         auto jsiArray0 = colorAttachments.asObject(runtime).asArray(runtime);
         auto jsiArray0Size = static_cast<int>(jsiArray0.size(runtime));
-        std::vector<wgpu::RenderPassColorAttachment> array0;
-        array0.reserve(jsiArray0Size);
+        auto array0 = new std::vector<wgpu::RenderPassColorAttachment>();
+        array0->reserve(jsiArray0Size);
         for (int i = 0; i < jsiArray0Size; i++) {
           auto element = JsiRenderPassColorAttachment::fromValue(
-              runtime, jsiArray0.getValueAtIndex(runtime, i).asObject(runtime));
-          array0.push_back(*element.get());
+              runtime, jsiArray0.getValueAtIndex(runtime, i));
+          array0->push_back(*element);
         }
 
         object->colorAttachmentCount = jsiArray0Size;
-        object->colorAttachments = array0.data();
+        object->colorAttachments = array0->data();
       } else {
         throw jsi::JSError(
             runtime,

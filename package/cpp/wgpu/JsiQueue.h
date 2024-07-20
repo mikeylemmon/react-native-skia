@@ -31,27 +31,36 @@ public:
     auto jsiArraySize = static_cast<int>(jsiArray.size(runtime));
     for (int i = 0; i < jsiArraySize; i++) {
       auto val = jsiArray.getValueAtIndex(runtime, i);
-      commandBuffers.push_back(
-          *JsiCommandBuffer::fromValue(runtime, val).get());
+      commandBuffers.push_back(*JsiCommandBuffer::fromValue(runtime, val));
     }
 
     getObject()->submit(commandBuffers);
     return jsi::Value::undefined();
   }
 
+  JSI_HOST_FUNCTION(writeBuffer) {
+
+    auto buffer = JsiBuffer::fromValue(runtime, arguments[0]);
+    auto offset = static_cast<uint64_t>(arguments[1].getNumber());
+    auto data = arguments[2].getObject(runtime).getArrayBuffer(runtime);
+    auto size = static_cast<uint64_t>(arguments[3].getNumber());
+    getObject()->writeBuffer(*buffer, offset, data.data(runtime), size);
+    return jsi::Value::undefined();
+  }
+
   // TODO: this fix, use JSI_EXPORT_PROPERTY_GETTERS instead
   EXPORT_JSI_API_BRANDNAME(JsiQueue, Queue)
 
-  JSI_EXPORT_FUNCTIONS(JSI_EXPORT_FUNC(JsiQueue, submit))
+  JSI_EXPORT_FUNCTIONS(JSI_EXPORT_FUNC(JsiQueue, submit),
+                       JSI_EXPORT_FUNC(JsiQueue, writeBuffer))
 
   /**
    * Returns the underlying object from a host object of this type
    */
-  static std::shared_ptr<wgpu::Queue> fromValue(jsi::Runtime &runtime,
-                                                const jsi::Value &raw) {
+  static wgpu::Queue *fromValue(jsi::Runtime &runtime, const jsi::Value &raw) {
     const auto &obj = raw.asObject(runtime);
     if (obj.isHostObject(runtime)) {
-      return obj.asHostObject<JsiQueue>(runtime)->getObject();
+      return obj.asHostObject<JsiQueue>(runtime)->getObject().get();
     } else {
       throw jsi::JSError(runtime, "Expected a JsiQueue object, but got a " +
                                       raw.toString(runtime).utf8(runtime));

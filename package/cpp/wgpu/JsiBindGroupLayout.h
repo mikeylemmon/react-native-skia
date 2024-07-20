@@ -18,28 +18,28 @@ namespace RNSkia {
 
 namespace jsi = facebook::jsi;
 
-class JsiTextureView
-    : public JsiSkWrappingSharedPtrHostObject<wgpu::TextureView> {
+class JsiBindGroupLayout
+    : public JsiSkWrappingSharedPtrHostObject<wgpu::BindGroupLayout> {
 public:
-  JsiTextureView(std::shared_ptr<RNSkPlatformContext> context,
-                 wgpu::TextureView m)
-      : JsiSkWrappingSharedPtrHostObject<wgpu::TextureView>(
-            context, std::make_shared<wgpu::TextureView>(std::move(m))) {}
+  JsiBindGroupLayout(std::shared_ptr<RNSkPlatformContext> context,
+                     wgpu::BindGroupLayout m)
+      : JsiSkWrappingSharedPtrHostObject<wgpu::BindGroupLayout>(
+            context, std::make_shared<wgpu::BindGroupLayout>(std::move(m))) {}
 
   // TODO: this fix, use JSI_EXPORT_PROPERTY_GETTERS instead
-  EXPORT_JSI_API_BRANDNAME(JsiTextureView, TextureView)
+  EXPORT_JSI_API_BRANDNAME(JsiBindGroupLayout, BindGroupLayout)
 
   /**
    * Returns the underlying object from a host object of this type
    */
-  static wgpu::TextureView *fromValue(jsi::Runtime &runtime,
-                                      const jsi::Value &raw) {
+  static wgpu::BindGroupLayout *fromValue(jsi::Runtime &runtime,
+                                          const jsi::Value &raw) {
     const auto &obj = raw.asObject(runtime);
     if (obj.isHostObject(runtime)) {
-      return obj.asHostObject<JsiTextureView>(runtime)->getObject().get();
+      return obj.asHostObject<JsiBindGroupLayout>(runtime)->getObject().get();
     } else {
       throw jsi::JSError(runtime,
-                         "Expected a JsiTextureView object, but got a " +
+                         "Expected a JsiBindGroupLayout object, but got a " +
                              raw.toString(runtime).utf8(runtime));
     }
   }

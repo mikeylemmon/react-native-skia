@@ -51,7 +51,7 @@ export const model: JSIObject[] = [
         name: "getPreferredCanvasFormat",
         args: [],
         returns: "string",
-        implementation: `return jsi::String::createFromUtf8(runtime, "bgra8unorm");`
+        implementation: `return jsi::String::createFromUtf8(runtime, "rgba8unorm");`
       }
     ]
   },
@@ -84,6 +84,14 @@ export const model: JSIObject[] = [
         member: "queue"
       },
       {
+        name: "createBindGroup",
+        args: [{
+          name: "descriptor",
+          type: "BindGroupDescriptor"
+        }],
+        returns: "BindGroup"
+      },
+      {
         name: "createRenderPipeline",
         args: [{
           name: "descriptor",
@@ -109,6 +117,83 @@ export const model: JSIObject[] = [
           defaultValue: true
         }],
         returns: "CommandEncoder",
+      },
+      {
+        name: "createBuffer",
+        args: [{
+          name: "descritor",
+          type: "BufferDescriptor"
+        }],
+        returns: "Buffer"
+      },
+      {
+        name: "createTexture",
+        args: [
+          {
+            name: "descriptor",
+            type: "TextureDescriptor"
+          }
+        ],
+        returns: "Texture"
+      }
+    ]
+  },
+  {
+    name: "BindGroupDescriptor",
+    properties: [
+      { name: "layout", type: "BindGroupLayout" },
+      { name: "entries", type: "BindGroupEntry[]"}
+    ]
+  },
+  {
+    name: "BindGroupLayout",
+  },
+  {
+    name: "BindGroupEntry",
+    properties: [
+      { name: "binding", type: "uint32_t" },
+      { name: "buffer", type: "Buffer" }
+    ]
+  },
+  {
+    name: "BindGroup"
+  },
+  {
+    name: "TextureDescriptor",
+    properties: [
+      { name: "size", type: "Extent3D" },
+      { name: "format", type: "TextureFormat" },
+      { name: "usage", type: "uint32_t" } // TextureUsage
+    ]
+  },
+  {
+    "name": "BufferDescriptor",
+    properties: [
+      { name: "size", type: "uint64_t" },
+      {"name": "usage", "type": "uint32_t"}, //BufferUsage
+      {"name": "mappedAtCreation", "type": "bool", "default": "false"}
+    ]
+  },
+  {
+    name: "Buffer",
+    methods: [
+      { name: "unmap", args: [] },
+      { 
+        name: "getMappedRange",
+        args: [
+          { name: "offset", "type": "size_t", "defaultAtomicValue": "0" },
+          {"name": "size", "type": "size_t", "defaultAtomicValue": "SIZE_MAX"}
+        ],
+        implementation: `
+        size_t offset = static_cast<size_t>(arguments[0].getNumber());
+        size_t size = static_cast<size_t>(arguments[1].getNumber());
+        auto data = getObject()->getMappedRange(offset, size);
+        auto arrayBufferCtor =
+            runtime.global().getPropertyAsFunction(runtime, "ArrayBuffer");
+        auto o = arrayBufferCtor.callAsConstructor(runtime, static_cast<double>(size)).getObject(runtime);
+        auto buf = o.getArrayBuffer(runtime);
+        memcpy(buf.data(runtime), data, size);
+        return o;`
       }
     ]
   },
@@ -132,6 +217,23 @@ export const model: JSIObject[] = [
           type: "CommandBuffer[]",
           ctype: true
         }]
+      },
+      {
+        name: "writeBuffer",
+        args: [
+          // {"name": "buffer", "type": "Buffer"},
+          // {"name": "offset", "type": "double"},
+          // {"name": "data", "type": "double[]"},
+          // {"name": "size", "type": "double"}
+        ],
+        implementation: `
+        auto buffer = JsiBuffer::fromValue(runtime, arguments[0]);
+        auto offset = static_cast<uint64_t>(arguments[1].getNumber());
+        auto data = arguments[2].getObject(runtime).getArrayBuffer(runtime);
+        auto size = static_cast<uint64_t>(arguments[3].getNumber());
+        getObject()->writeBuffer(*buffer, offset, data.data(runtime), size);
+        return jsi::Value::undefined();
+        `,
       }
     ]
   },
@@ -187,6 +289,15 @@ object->depthSlice = UINT32_MAX;`,
     ]
   },
   {
+    name: "Extent3D",
+   // iterable: '2',
+    properties: [
+      {"name": "width", "type": "uint32_t"},
+      {"name": "height", "type": "uint32_t"},
+      // {"name": "depth", "type": "uint32_t"},
+    ]
+  },
+  {
     name: "Color",
     iterable: '4',
     properties: [
@@ -227,6 +338,7 @@ object->chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;`,
   },
   {
     name: "ColorTargetState",
+    defaultProperties: `object->writeMask = wgpu::ColorWriteMask::All;`,
     properties: [
       {"name": "format", "type": "TextureFormat"},
       {"name": "blend", "type": "BlendState", "optional": true, pointer: true},
@@ -290,7 +402,17 @@ object->chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;`,
     ]
   },
   {
-    name: "RenderPipeline"
+    name: "RenderPipeline",
+    methods: [{
+      name: "getBindGroupLayout",
+      returns: "BindGroupLayout",
+      args: [
+        {
+          name: "index",
+          type: "uint32_t"
+        }
+      ]
+    }]
   },
   {
     name: "DeviceDescriptor",
