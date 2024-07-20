@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -12,6 +12,8 @@
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
 #include "JsiStencilFaceState.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -40,7 +42,6 @@ public:
       return obj.asHostObject<JsiDepthStencilState>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::DepthStencilState();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "format")) {
         auto format = obj.getProperty(runtime, "format");

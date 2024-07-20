@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -13,17 +13,24 @@
 #include "JsiBufferDescriptor.h"
 #include "JsiCommandEncoder.h"
 #include "JsiCommandEncoderDescriptor.h"
+#include "JsiComputePipeline.h"
+#include "JsiComputePipelineDescriptor.h"
 #include "JsiEnums.h"
 #include "JsiHostObject.h"
+#include "JsiPipelineLayoutDescriptor.h"
 #include "JsiPromises.h"
 #include "JsiQueue.h"
 #include "JsiRenderPipeline.h"
 #include "JsiRenderPipelineDescriptor.h"
+#include "JsiSampler.h"
+#include "JsiSamplerDescriptor.h"
 #include "JsiShaderModule.h"
 #include "JsiShaderModuleWGSLDescriptor.h"
 #include "JsiSkHostObjects.h"
 #include "JsiTexture.h"
 #include "JsiTextureDescriptor.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -39,15 +46,41 @@ public:
 
   JSI_PROPERTY_GET(queue) {
 
-    auto ret = getObject()->getQueue();
+    auto ret = getObject()->GetQueue();
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "getQueue returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiQueue>(getContext(), ret));
+  }
+
+  JSI_HOST_FUNCTION(createPipelineLayout) {
+    auto descriptor =
+        JsiPipelineLayoutDescriptor::fromValue(runtime, arguments[0]);
+
+    getObject()->CreatePipelineLayout(descriptor);
+
+    return jsi::Value::undefined();
+  }
+
+  JSI_HOST_FUNCTION(createSampler) {
+    auto descriptor = JsiSamplerDescriptor::fromValue(runtime, arguments[0]);
+
+    auto ret = getObject()->CreateSampler(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createSampler returned null");
+    }
+    return jsi::Object::createFromHostObject(
+        runtime, std::make_shared<JsiSampler>(getContext(), ret));
   }
 
   JSI_HOST_FUNCTION(createBindGroup) {
     auto descriptor = JsiBindGroupDescriptor::fromValue(runtime, arguments[0]);
 
-    auto ret = getObject()->createBindGroup(*descriptor);
+    auto ret = getObject()->CreateBindGroup(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createBindGroup returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiBindGroup>(getContext(), ret));
   }
@@ -56,9 +89,24 @@ public:
     auto descriptor =
         JsiRenderPipelineDescriptor::fromValue(runtime, arguments[0]);
 
-    auto ret = getObject()->createRenderPipeline(*descriptor);
+    auto ret = getObject()->CreateRenderPipeline(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createRenderPipeline returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiRenderPipeline>(getContext(), ret));
+  }
+
+  JSI_HOST_FUNCTION(createComputePipeline) {
+    auto descriptor =
+        JsiComputePipelineDescriptor::fromValue(runtime, arguments[0]);
+
+    auto ret = getObject()->CreateComputePipeline(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createComputePipeline returned null");
+    }
+    return jsi::Object::createFromHostObject(
+        runtime, std::make_shared<JsiComputePipeline>(getContext(), ret));
   }
 
   JSI_HOST_FUNCTION(createShaderModule) {
@@ -66,9 +114,12 @@ public:
         JsiShaderModuleWGSLDescriptor::fromValue(runtime, arguments[0]);
 
     auto moduleDescriptorNext = *moduleDescriptor;
-    wgpu::ShaderModuleDescriptor baseModuleDescriptor;
-    baseModuleDescriptor.nextInChain = &moduleDescriptorNext.chain;
-    auto ret = getObject()->createShaderModule(baseModuleDescriptor);
+    auto baseModuleDescriptor = new wgpu::ShaderModuleDescriptor();
+    baseModuleDescriptor->nextInChain = &moduleDescriptorNext;
+    auto ret = getObject()->CreateShaderModule(baseModuleDescriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createShaderModule returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiShaderModule>(getContext(), ret));
   }
@@ -80,7 +131,10 @@ public:
             ? JsiCommandEncoderDescriptor::fromValue(runtime, arguments[0])
             : defaultDescriptor;
 
-    auto ret = getObject()->createCommandEncoder(*descriptor);
+    auto ret = getObject()->CreateCommandEncoder(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createCommandEncoder returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiCommandEncoder>(getContext(), ret));
   }
@@ -88,7 +142,10 @@ public:
   JSI_HOST_FUNCTION(createBuffer) {
     auto descritor = JsiBufferDescriptor::fromValue(runtime, arguments[0]);
 
-    auto ret = getObject()->createBuffer(*descritor);
+    auto ret = getObject()->CreateBuffer(descritor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createBuffer returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiBuffer>(getContext(), ret));
   }
@@ -96,7 +153,10 @@ public:
   JSI_HOST_FUNCTION(createTexture) {
     auto descriptor = JsiTextureDescriptor::fromValue(runtime, arguments[0]);
 
-    auto ret = getObject()->createTexture(*descriptor);
+    auto ret = getObject()->CreateTexture(descriptor);
+    if (ret == nullptr) {
+      throw jsi::JSError(runtime, "createTexture returned null");
+    }
     return jsi::Object::createFromHostObject(
         runtime, std::make_shared<JsiTexture>(getContext(), ret));
   }
@@ -105,8 +165,11 @@ public:
 
   JSI_EXPORT_PROPERTY_GETTERS(JSI_EXPORT_PROP_GET(JsiDevice, queue))
 
-  JSI_EXPORT_FUNCTIONS(JSI_EXPORT_FUNC(JsiDevice, createBindGroup),
+  JSI_EXPORT_FUNCTIONS(JSI_EXPORT_FUNC(JsiDevice, createPipelineLayout),
+                       JSI_EXPORT_FUNC(JsiDevice, createSampler),
+                       JSI_EXPORT_FUNC(JsiDevice, createBindGroup),
                        JSI_EXPORT_FUNC(JsiDevice, createRenderPipeline),
+                       JSI_EXPORT_FUNC(JsiDevice, createComputePipeline),
                        JSI_EXPORT_FUNC(JsiDevice, createShaderModule),
                        JSI_EXPORT_FUNC(JsiDevice, createCommandEncoder),
                        JSI_EXPORT_FUNC(JsiDevice, createBuffer),

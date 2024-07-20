@@ -26,10 +26,12 @@ for (int i = 0; i < jsiArraySize; i++) {
   let unwrap = '';
   if (arg.type === "bool") {
     unwrap = `${name}.asBool()`;
+  } else if (arg.type === "string") {
+    unwrap = `strdup(arguments[${index}].asString(runtime).utf8(runtime).c_str())`;
   } else if (isNumberType(arg.type)) {
     unwrap = unWrapType(`arguments[${index}]`, arg.type, false);
   } else if (isEnum(arg.type)) {
-    unwrap = `get${arg.type}(arguments[${index}].asString().utf8(runtime).c_str())`;
+    unwrap = `get${arg.type}(arguments[${index}].asString(runtime).utf8(runtime).c_str())`;
   } else {
     const name = objectName(arg.type);
     const className = `Jsi${name}`;
@@ -81,13 +83,13 @@ export const wrapReturnValue = (returns: string | undefined) => {
   }
 };
 
-const argList = (args: Arg[]) => args.map(arg => arg.baseType ? `base${_.upperFirst(arg.name)}`:  (isAtomicType(arg.type) || arg.type.endsWith("[]")) ? `${arg.name}` : `*${arg.name}`).join(", ");
+const argList = (args: Arg[]) => args.map(arg => arg.baseType ? `base${_.upperFirst(arg.name)}`:  (isAtomicType(arg.type) || arg.type.endsWith("[]") || arg.type.endsWith("Descriptor")) ? `${arg.name}` : `*${arg.name}`).join(", ");
 
 const baseType = (arg: Arg) => {
   return `
 auto ${arg.name}Next = *moduleDescriptor;
-wgpu::${arg.baseType} base${_.upperFirst(arg.name)};
-base${_.upperFirst(arg.name)}.nextInChain = &${arg.name}Next.chain;`
+auto base${_.upperFirst(arg.name)} = new wgpu::${arg.baseType}();
+base${_.upperFirst(arg.name)}->nextInChain = &${arg.name}Next;`
 };
 
 const generatorMethod = (method: Method) => {
@@ -107,7 +109,10 @@ const generatorMethod = (method: Method) => {
     ${
       args.filter(arg => arg.baseType).map(arg => baseType(arg))
     }
-    ${returns ? 'auto ret = ' : ''}getObject()->${_.camelCase(method.name)}(${argList(args)});
+    ${returns ? 'auto ret = ' : ''}getObject()->${_.upperFirst(_.camelCase(method.name))}(${argList(args)});
+    ${returns ? `if (ret == nullptr) {
+      throw jsi::JSError(runtime, "${method.name} returned null");
+    }` : ""}
     return ${wrapReturnValue(returns)};
   }
 `;
@@ -125,7 +130,7 @@ const generatorAsyncMethod = (method: Method) => {
         [context = std::move(context), object = std::move(object) ${depList}](
             jsi::Runtime &runtime,
             std::shared_ptr<RNJsi::JsiPromises::Promise> promise) -> void {
-          auto ret = object->${method.name}(${argList(args)});
+          auto ret = object->${_.upperFirst(method.name)}(${argList(args)});
           if (ret == nullptr) {
             promise->resolve(jsi::Value::null());
           } else {
@@ -140,7 +145,6 @@ const generatorAsyncMethod = (method: Method) => {
 
 const unpackProperties = (name: string, properties: Property[], defaultProperties: string) => {
   return `auto object = new wgpu::${name}();
-object->setDefault();
 ${defaultProperties}
 ${properties.map((property, index) => {
   const propName = _.camelCase(property.name);
@@ -180,7 +184,7 @@ export const generateObject = (object: JSIObject) => {
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -188,7 +192,9 @@ export const generateObject = (object: JSIObject) => {
 #include "JsiHostObject.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
 #include "RNSkPlatformContext.h"
+#include "MutableJSIBuffer.h"
 #include "JsiEnums.h"
 ${computeDependencies(object)}
 
@@ -214,6 +220,7 @@ ${className}(std::shared_ptr<RNSkPlatformContext> context, ${objectName} m)
     ${nonMemberMethods.filter(m => !m.member).map(method => `JSI_EXPORT_FUNC(${className}, ${_.camelCase(method.name)})`).join(",\n    ")}
   )` : ''}
 
+  ${object.fromValueImpl ? object.fromValueImpl : `
   /**
    * Returns the underlying object from a host object of this type
    */
@@ -228,6 +235,8 @@ ${className}(std::shared_ptr<RNSkPlatformContext> context, ${objectName} m)
       "Expected a ${className} object, but got a " + raw.toString(runtime).utf8(runtime));`}
     }
   }
+  `}
+
 };
 } // namespace RNSkia
 `;

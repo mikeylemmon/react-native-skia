@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -13,6 +13,8 @@
 #include "JsiHostObject.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -39,13 +41,30 @@ public:
          descriptor = std::move(descriptor)](
             jsi::Runtime &runtime,
             std::shared_ptr<RNJsi::JsiPromises::Promise> promise) -> void {
-          auto ret = object->requestDevice(*descriptor);
-          if (ret == nullptr) {
+          wgpu::Device device = nullptr;
+          object->RequestDevice(
+              nullptr,
+              [](WGPURequestDeviceStatus, WGPUDevice cDevice,
+                 const char *message, void *userdata) {
+                if (message != nullptr) {
+                  fprintf(stderr, "%s", message);
+                  return;
+                }
+                *static_cast<wgpu::Device *>(userdata) =
+                    wgpu::Device::Acquire(cDevice);
+              },
+              &device);
+          if (device == nullptr) {
             promise->resolve(jsi::Value::null());
           } else {
+            device.SetUncapturedErrorCallback(
+                [](WGPUErrorType type, const char *message, void *userdata) {
+                  RNSkLogger::logToConsole("Error: %s", message);
+                },
+                nullptr);
             promise->resolve(jsi::Object::createFromHostObject(
                 runtime, std::make_shared<JsiDevice>(std::move(context),
-                                                     std::move(ret))));
+                                                     std::move(device))));
           }
         });
   }

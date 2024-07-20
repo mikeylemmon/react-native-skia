@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -12,6 +12,8 @@
 #include "JsiPromises.h"
 #include "JsiRenderPassColorAttachment.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -43,7 +45,6 @@ public:
           .get();
     } else {
       auto object = new wgpu::RenderPassDescriptor();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "colorAttachments")) {
         auto colorAttachments = obj.getProperty(runtime, "colorAttachments");

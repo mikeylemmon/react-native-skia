@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -12,6 +12,8 @@
 #include "JsiHostObject.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -40,7 +42,6 @@ public:
       return obj.asHostObject<JsiTextureDescriptor>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::TextureDescriptor();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "size")) {
         auto size = obj.getProperty(runtime, "size");
@@ -62,10 +63,16 @@ public:
       if (obj.hasProperty(runtime, "usage")) {
         auto usage = obj.getProperty(runtime, "usage");
 
-        object->usage = static_cast<uint32_t>(usage.getNumber());
+        object->usage = static_cast<wgpu::TextureUsage>(usage.getNumber());
       } else {
         throw jsi::JSError(runtime,
                            "Missing mandatory prop usage in TextureDescriptor");
+      }
+      if (obj.hasProperty(runtime, "mipLevelCount")) {
+        auto mipLevelCount = obj.getProperty(runtime, "mipLevelCount");
+
+        object->mipLevelCount =
+            static_cast<uint32_t>(mipLevelCount.getNumber());
       }
       return object;
     }

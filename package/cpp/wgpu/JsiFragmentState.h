@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -13,6 +13,8 @@
 #include "JsiPromises.h"
 #include "JsiShaderModule.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -41,7 +43,6 @@ public:
       return obj.asHostObject<JsiFragmentState>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::FragmentState();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "module")) {
         auto module = obj.getProperty(runtime, "module");

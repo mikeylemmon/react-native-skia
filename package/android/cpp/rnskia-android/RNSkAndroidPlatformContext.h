@@ -27,6 +27,10 @@ public:
       : RNSkPlatformContext(runtime, jsCallInvoker,
                             jniPlatformContext->getPixelDensity()),
         _jniPlatformContext(jniPlatformContext) {
+    wgpu::InstanceDescriptor instanceDesc;
+    instanceDesc.features.timedWaitAnyEnable = true;
+    instanceDesc.features.timedWaitAnyMaxCount = 64;
+    _instance = wgpu::CreateInstance(&instanceDesc);
     // Hook onto the notify draw loop callback in the platform context
     jniPlatformContext->setOnNotifyDrawLoop(
         [this]() { notifyDrawLoop(false); });
@@ -66,21 +70,19 @@ public:
 
   void registerSurfaceDescriptor(int nativeId, void *window, int width,
                                  int height) override {
-    WGPUSurfaceDescriptorFromAndroidNativeWindow androidSurfaceDesc = {};
-    androidSurfaceDesc.chain.sType =
-        WGPUSType_SurfaceDescriptorFromAndroidNativeWindow;
+
+    wgpu::SurfaceDescriptorFromAndroidNativeWindow androidSurfaceDesc = {};
     androidSurfaceDesc.window = window;
 
-    WGPUSurfaceDescriptor surfaceDesc = {};
-    surfaceDesc.nextInChain =
-        reinterpret_cast<const WGPUChainedStruct *>(&androidSurfaceDesc);
-
-    wgpu::Instance instance = wgpuCreateInstance(nullptr);
-    wgpu::Surface surface = wgpuInstanceCreateSurface(instance, &surfaceDesc);
+    wgpu::SurfaceDescriptor surfaceDesc = {};
+    surfaceDesc.nextInChain = &androidSurfaceDesc;
+    auto surface = _instance.CreateSurface(&surfaceDesc);
 
     _descriptors[nativeId] = std::make_tuple(
         std::make_shared<wgpu::Surface>(surface), width, height);
   }
+
+  wgpu::Instance getInstance() { return _instance; }
 
   virtual std::tuple<std::shared_ptr<wgpu::Surface>, int, int>
   getSurfaceDescriptor(int nativeId) override {
@@ -96,6 +98,7 @@ private:
   JniPlatformContext *_jniPlatformContext;
   std::map<int, std::tuple<std::shared_ptr<wgpu::Surface>, int, int>>
       _descriptors;
+  wgpu::Instance _instance = nullptr;
 };
 
 } // namespace RNSkia

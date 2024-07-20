@@ -9,8 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "webgpu.h"
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include "RNSkDispatchQueue.h"
 
@@ -179,6 +178,7 @@ public:
                                          int height) = 0;
   virtual std::tuple<std::shared_ptr<wgpu::Surface>, int, int>
   getSurfaceDescriptor(int nativeId) = 0;
+  virtual wgpu::Instance getInstance() = 0;
 
   /**
    * Starts (if not started) a loop that will call back on display sync

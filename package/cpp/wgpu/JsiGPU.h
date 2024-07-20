@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -13,6 +13,8 @@
 #include "JsiPromises.h"
 #include "JsiRequestAdapterOptions.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -25,10 +27,6 @@ public:
   JsiGPU(std::shared_ptr<RNSkPlatformContext> context, wgpu::Instance m)
       : JsiSkWrappingSharedPtrHostObject<wgpu::Instance>(
             context, std::make_shared<wgpu::Instance>(std::move(m))) {}
-
-  JSI_HOST_FUNCTION(getPreferredCanvasFormat) {
-    return jsi::String::createFromUtf8(runtime, "rgba8unorm");
-  }
 
   JSI_HOST_FUNCTION(requestAdapter) {
     auto defaultOptions = new wgpu::RequestAdapterOptions();
@@ -43,15 +41,31 @@ public:
          options = std::move(options)](
             jsi::Runtime &runtime,
             std::shared_ptr<RNJsi::JsiPromises::Promise> promise) -> void {
-          auto ret = object->requestAdapter(*options);
-          if (ret == nullptr) {
+          wgpu::Adapter adapter = nullptr;
+          object->RequestAdapter(
+              nullptr,
+              [](WGPURequestAdapterStatus, WGPUAdapter cAdapter,
+                 const char *message, void *userdata) {
+                if (message != nullptr) {
+                  fprintf(stderr, "%s", message);
+                  return;
+                }
+                *static_cast<wgpu::Adapter *>(userdata) =
+                    wgpu::Adapter::Acquire(cAdapter);
+              },
+              &adapter);
+          if (adapter == nullptr) {
             promise->resolve(jsi::Value::null());
           } else {
             promise->resolve(jsi::Object::createFromHostObject(
                 runtime, std::make_shared<JsiAdapter>(std::move(context),
-                                                      std::move(ret))));
+                                                      std::move(adapter))));
           }
         });
+  }
+
+  JSI_HOST_FUNCTION(getPreferredCanvasFormat) {
+    return jsi::String::createFromUtf8(runtime, "rgba8unorm");
   }
 
   // TODO: this fix, use JSI_EXPORT_PROPERTY_GETTERS instead

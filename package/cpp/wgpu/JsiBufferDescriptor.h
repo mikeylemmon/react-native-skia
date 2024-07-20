@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -11,6 +11,8 @@
 #include "JsiHostObject.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -39,7 +41,6 @@ public:
       return obj.asHostObject<JsiBufferDescriptor>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::BufferDescriptor();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "size")) {
         auto size = obj.getProperty(runtime, "size");
@@ -52,7 +53,7 @@ public:
       if (obj.hasProperty(runtime, "usage")) {
         auto usage = obj.getProperty(runtime, "usage");
 
-        object->usage = static_cast<uint32_t>(usage.getNumber());
+        object->usage = static_cast<wgpu::BufferUsage>(usage.getNumber());
       } else {
         throw jsi::JSError(runtime,
                            "Missing mandatory prop usage in BufferDescriptor");
@@ -62,10 +63,6 @@ public:
 
         object->mappedAtCreation =
             static_cast<uint32_t>(mappedAtCreation.getBool());
-      } else {
-        throw jsi::JSError(
-            runtime,
-            "Missing mandatory prop mappedAtCreation in BufferDescriptor");
       }
       return object;
     }

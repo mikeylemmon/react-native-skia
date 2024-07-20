@@ -3,11 +3,10 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
-#include "JsiDepthStencilState.h"
 #include "JsiEnums.h"
 #include "JsiFragmentState.h"
 #include "JsiHostObject.h"
@@ -15,7 +14,9 @@
 #include "JsiPrimitiveState.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
 #include "JsiVertexState.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -48,10 +49,6 @@ public:
           .get();
     } else {
       auto object = new wgpu::RenderPipelineDescriptor();
-      object->setDefault();
-      object->multisample.count = 1;
-      object->multisample.mask = ~0u;
-      object->multisample.alphaToCoverageEnabled = false;
 
       if (obj.hasProperty(runtime, "vertex")) {
         auto vertex = obj.getProperty(runtime, "vertex");
@@ -70,12 +67,6 @@ public:
         throw jsi::JSError(
             runtime,
             "Missing mandatory prop primitive in RenderPipelineDescriptor");
-      }
-      if (obj.hasProperty(runtime, "depthStencil")) {
-        auto depthStencil = obj.getProperty(runtime, "depthStencil");
-
-        object->depthStencil =
-            JsiDepthStencilState::fromValue(runtime, depthStencil);
       }
       if (obj.hasProperty(runtime, "multisample")) {
         auto multisample = obj.getProperty(runtime, "multisample");

@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -12,6 +12,9 @@
 #include "JsiPromises.h"
 #include "JsiShaderModule.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "JsiVertexBufferLayout.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -40,7 +43,6 @@ public:
       return obj.asHostObject<JsiVertexState>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::VertexState();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "module")) {
         auto module = obj.getProperty(runtime, "module");
@@ -58,6 +60,21 @@ public:
       } else {
         throw jsi::JSError(runtime,
                            "Missing mandatory prop entryPoint in VertexState");
+      }
+      if (obj.hasProperty(runtime, "buffers")) {
+        auto buffers = obj.getProperty(runtime, "buffers");
+        auto jsiArray2 = buffers.asObject(runtime).asArray(runtime);
+        auto jsiArray2Size = static_cast<int>(jsiArray2.size(runtime));
+        auto array2 = new std::vector<wgpu::VertexBufferLayout>();
+        array2->reserve(jsiArray2Size);
+        for (int i = 0; i < jsiArray2Size; i++) {
+          auto element = JsiVertexBufferLayout::fromValue(
+              runtime, jsiArray2.getValueAtIndex(runtime, i));
+          array2->push_back(*element);
+        }
+
+        object->bufferCount = jsiArray2Size;
+        object->buffers = array2->data();
       }
       return object;
     }

@@ -66,8 +66,9 @@ public:
     auto nativeId = getSkiaView()->getNativeId();
     T::getPlatformContext()->registerSurfaceDescriptor(nativeId, _window, width,
                                                        height);
-
-    // runTriangleDemo(_window, width, height);
+    // RNSkLogger::logToConsole("Surface size changed: %d, %d",
+    // isVulkanSupported());
+    //  runTriangleDemo(_window, width, height);
   }
 
   float getPixelDensity() override {

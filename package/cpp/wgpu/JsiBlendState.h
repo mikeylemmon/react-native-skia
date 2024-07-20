@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "webgpu.hpp"
+#include "dawn/webgpu_cpp.h"
 
 #include <jsi/jsi.h>
 
@@ -12,6 +12,8 @@
 #include "JsiHostObject.h"
 #include "JsiPromises.h"
 #include "JsiSkHostObjects.h"
+#include "JsiTextureView.h"
+#include "MutableJSIBuffer.h"
 #include "RNSkLog.h"
 #include "RNSkPlatformContext.h"
 
@@ -40,7 +42,6 @@ public:
       return obj.asHostObject<JsiBlendState>(runtime)->getObject().get();
     } else {
       auto object = new wgpu::BlendState();
-      object->setDefault();
 
       if (obj.hasProperty(runtime, "color")) {
         auto color = obj.getProperty(runtime, "color");
