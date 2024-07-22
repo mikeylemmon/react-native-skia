@@ -57,7 +57,7 @@ export const Hue = () => {
   });
   return (
     <View style={{ flex: 1 }}>
-      <Canvas style={{ flex: 1 }}>
+      <Canvas style={{ flex: 1 }} debug={true}>
         <Fill color={color} />
         <Circle c={c} r={r}>
           <BlurMask blur={40} style="solid" />

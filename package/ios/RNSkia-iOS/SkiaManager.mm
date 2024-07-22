@@ -28,6 +28,7 @@
                      jsInvoker:(std::shared_ptr<facebook::react::CallInvoker>)
                                    jsInvoker {
   self = [super init];
+  NSLog(@"SkiaManger > initWithBridge");
   if (self) {
     RCTCxxBridge *cxxBridge = (RCTCxxBridge *)bridge;
     if (cxxBridge.runtime) {

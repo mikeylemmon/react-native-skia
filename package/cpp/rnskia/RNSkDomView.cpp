@@ -1,5 +1,6 @@
 #include "RNSkDomView.h"
 #include "DrawingContext.h"
+#include "RNSkLog.h"
 
 #include <chrono>
 #include <utility>
@@ -196,7 +197,8 @@ void RNSkDomRenderer::callOnTouch() {
 
 void RNSkDomRenderer::renderDebugOverlays(SkCanvas *canvas) {
   if (!getShowDebugOverlays()) {
-    return;
+	// RNSkLogger::logToConsole("RNSkDomView > renderDebugOverlays: NO");
+	return;
   }
   auto renderAvg = _renderTimingInfo.getAverage();
   auto fps = _renderTimingInfo.getFps();
@@ -208,13 +210,19 @@ void RNSkDomRenderer::renderDebugOverlays(SkCanvas *canvas) {
 
   std::string debugString = stream.str();
 
+  // RNSkLogger::logToConsole("RNSkDomView > RNSkDomRenderer > renderDebugOverlays: %s", debugString.c_str());
+
   // Set up debug font/paints
   auto font = SkFont();
   font.setSize(14);
   auto paint = SkPaint();
   paint.setColor(SkColors::kRed);
+  paint.setStroke(true);
+  paint.setStrokeWidth(3);
+  paint.setStyle(SkPaint::kStrokeAndFill_Style);
   canvas->drawSimpleText(debugString.c_str(), debugString.size(),
-                         SkTextEncoding::kUTF8, 8, 18, font, paint);
+                         SkTextEncoding::kUTF8, 10, 10, font, paint);
+  // canvas->drawLine(10, 10, 150, 250, paint);
 }
 
 } // namespace RNSkia

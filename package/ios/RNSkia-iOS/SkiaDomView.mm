@@ -2,7 +2,7 @@
 #import "SkiaDomView.h"
 
 #import "RNSkDomView.h"
-#import "RNSkIOSView.h"
+#import "RNSkiOSView.h"
 #import "RNSkPlatformContext.h"
 
 #import "RNSkiaModule.h"
@@ -23,6 +23,7 @@ using namespace facebook::react;
 @implementation SkiaDomView
 
 - (instancetype)initWithFrame:(CGRect)frame {
+  NSLog(@"SkiaDomView > initWithFrame");
   if (self = [super initWithFrame:frame]) {
     auto skManager = [[self skiaManager] skManager];
     // Pass SkManager as a raw pointer to avoid circular dependenciesr
@@ -50,6 +51,7 @@ using namespace facebook::react;
   [super updateProps:props oldProps:oldProps];
   int nativeId =
       [[RCTConvert NSString:RCTNSStringFromString(newProps.nativeId)] intValue];
+  NSLog(@"(#%d) SkiaDomView > updateProps: debug=%d", nativeId, newProps.debug ? 1 : 0);
   [self setNativeId:nativeId];
   [self setDrawingMode:newProps.mode];
   [self setDebugMode:newProps.debug];

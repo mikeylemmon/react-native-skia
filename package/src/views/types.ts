@@ -1,7 +1,13 @@
 import type { ViewProps } from "react-native";
 
 import type { GroupProps, RenderNode } from "../dom/types";
-import type { SkImage, SkPicture, SkRect, SkSize } from "../skia/types";
+import type {
+  SkImage,
+  SkPicture,
+  SkRect,
+  SkSize,
+  SkSurface,
+} from "../skia/types";
 import type { SharedValueType } from "../renderer/processors/Animations/Animations";
 
 export type DrawMode = "continuous" | "default";
@@ -53,6 +59,7 @@ export interface ISkiaViewApi {
   requestRedraw: (nativeId: number) => void;
   makeImageSnapshot: (nativeId: number, rect?: SkRect) => SkImage;
   makeImageSnapshotAsync: (nativeId: number, rect?: SkRect) => Promise<SkImage>;
+  getSurface: (nativeId: number) => SkSurface | undefined;
 }
 
 export interface SkiaBaseViewProps extends ViewProps {

@@ -89,6 +89,15 @@ See: https://shopify.github.io/react-native-skia/docs/animations/gestures`
   }
 
   /**
+   * Get the underlying Surface object
+   * @returns A Surface object.
+   */
+  public getSurface() {
+    assertSkiaViewApi();
+    return SkiaViewApi.getSurface(this._nativeId);
+  }
+
+  /**
    * Clear up the dom node when unmounting to release resources.
    */
   componentWillUnmount(): void {

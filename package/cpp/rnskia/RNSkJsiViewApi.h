@@ -12,6 +12,7 @@
 #include "JsiValueWrapper.h"
 #include "RNSkPlatformContext.h"
 #include "RNSkView.h"
+#include "RNSkLog.h"
 #include <jsi/jsi.h>
 
 namespace RNSkia {
@@ -88,11 +89,58 @@ public:
 
     // find Skia View
     int nativeId = arguments[0].asNumber();
+    // RNSkLogger::logToConsole("(#%d) RNSkJsiViewApi > requestRedraw", nativeId);
     std::lock_guard<std::mutex> lock(_mutex);
     auto info = getEnsuredViewInfo(nativeId);
     if (info->view != nullptr) {
       info->view->requestRedraw();
     }
+    return jsi::Value::undefined();
+  }
+
+  JSI_HOST_FUNCTION(getSurface) {
+    if (count < 1) {
+      _platformContext->raiseError(
+          std::string("makeImageSnapshot: Expected at least 1 argument, got " +
+                      std::to_string(count) + "."));
+      return jsi::Value::undefined();
+    }
+
+    if (!arguments[0].isNumber()) {
+      _platformContext->raiseError(
+          "makeImageSnapshot: First argument must be a number");
+      return jsi::Value::undefined();
+    }
+
+    // find Skia view
+    int nativeId = arguments[0].asNumber();
+    sk_sp<SkImage> image;
+    std::shared_ptr<RNSkView> view;
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      auto info = getEnsuredViewInfo(nativeId);
+      view = info->view;
+    }
+    if (view == nullptr) {
+      throw jsi::JSError(runtime, "No Skia View currently available.");
+      return jsi::Value::undefined();
+    }
+
+    // if (count > 1 && !arguments[1].isUndefined() && !arguments[1].isNull()) {
+    //   auto rect = JsiSkRect::fromValue(runtime, arguments[1]);
+    //   image = view->makeImageSnapshot(rect.get());
+    // } else {
+    //   image = view->makeImageSnapshot(nullptr);
+    // }
+    // if (image == nullptr) {
+    //   throw jsi::JSError(runtime,
+    //                       "Could not create image from current surface.");
+    //   return jsi::Value::undefined();
+    // }
+    // return jsi::Object::createFromHostObject(
+    //     runtime, std::make_shared<JsiSkImage>(_platformContext, image));
+
+    RNSkLogger::logToConsole("(#%d) RNSkJsiViewApi > getSurface: TODO!", nativeId);
     return jsi::Value::undefined();
   }
 
@@ -192,7 +240,8 @@ public:
   JSI_EXPORT_FUNCTIONS(JSI_EXPORT_FUNC(RNSkJsiViewApi, setJsiProperty),
                        JSI_EXPORT_FUNC(RNSkJsiViewApi, requestRedraw),
                        JSI_EXPORT_FUNC(RNSkJsiViewApi, makeImageSnapshotAsync),
-                       JSI_EXPORT_FUNC(RNSkJsiViewApi, makeImageSnapshot))
+                       JSI_EXPORT_FUNC(RNSkJsiViewApi, makeImageSnapshot),
+                       JSI_EXPORT_FUNC(RNSkJsiViewApi, getSurface))
 
   /**
    * Constructor

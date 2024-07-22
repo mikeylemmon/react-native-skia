@@ -27,6 +27,7 @@
                                  std::shared_ptr<RNSkia::RNSkPlatformContext>)>)
                                 factory {
   self = [super init];
+  NSLog(@"SkiaUIView > initWithManager");
   if (self) {
     [self initCommon:manager factory:factory];
   }
@@ -44,7 +45,7 @@
                         std::shared_ptr<RNSkia::RNSkPlatformContext>)>)factory {
   _manager = manager;
   _nativeId = 0;
-  _debugMode = false;
+  _debugMode = true;
   _drawingMode = RNSkia::RNSkDrawingMode::Default;
   _factory = factory;
 }
