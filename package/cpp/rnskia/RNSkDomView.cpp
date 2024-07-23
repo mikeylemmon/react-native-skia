@@ -102,6 +102,9 @@ void RNSkDomRenderer::renderCanvas(SkCanvas *canvas, float scaledWidth,
   // Update canvas before drawing
   _drawingContext->setCanvas(canvas);
 
+  // Set the backbuffer
+  _drawingContext->setBackbuffer(_backbuffer);
+
   try {
     // Ask the root node to render to the provided canvas
     std::lock_guard<std::mutex> lock(_rootLock);

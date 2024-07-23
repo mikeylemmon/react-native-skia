@@ -16,6 +16,7 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkRefCnt.h"
+#include "include/core/SkSurface.h"
 
 #pragma clang diagnostic pop
 
@@ -79,6 +80,16 @@ public:
    Sets the canvas
    */
   void setCanvas(SkCanvas *canvas);
+
+  /**
+   Get/Sets the backbuffer surface
+   */
+  sk_sp<SkSurface> getBackbuffer() { return _backbuffer; }
+  void setBackbuffer(sk_sp<SkSurface> backbuffer) {
+    _backbuffer = backbuffer;
+	_declarationContext->setBackbuffer(backbuffer);
+  }
+  sk_sp<SkSurface> _backbuffer = nullptr;
 
   /**
    Gets the paint object

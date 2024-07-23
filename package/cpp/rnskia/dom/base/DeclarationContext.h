@@ -15,6 +15,7 @@
 #include "include/core/SkPaint.h"
 #include "include/core/SkPathEffect.h"
 #include "include/core/SkShader.h"
+#include "include/core/SkSurface.h"
 #include "include/effects/SkImageFilters.h"
 
 #pragma clang diagnostic pop
@@ -66,6 +67,15 @@ public:
     _maskFilters.pop();
     _paints.pop();
   }
+
+  /**
+   Get/Sets the backbuffer surface
+   */
+  sk_sp<SkSurface> getBackbuffer() { return _backbuffer; }
+  void setBackbuffer(sk_sp<SkSurface> backbuffer) {
+    _backbuffer = backbuffer;
+  }
+  sk_sp<SkSurface> _backbuffer = nullptr;
 
 private:
   std::stack<Declaration<sk_sp<SkShader>>> _shaders;

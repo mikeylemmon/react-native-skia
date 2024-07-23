@@ -4,19 +4,26 @@ import {
   Circle,
   Fill,
   Group,
+  ImageShader,
   mix,
   PaintStyle,
   polar2Canvas,
+  Shader,
   Skia,
   useCanvasRef,
+  useImage,
   vec,
 } from "@shopify/react-native-skia";
 import React, { useEffect, useMemo } from "react";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import { PixelRatio, StyleSheet, useWindowDimensions } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 
 import { useLoop } from "../../components/Animations";
+import { linear } from "../Transitions/transitions/linear";
+import { transition } from "../Transitions/transitions/Base";
+
+const linearMixShader = transition(linear);
 
 const c1 = "#a1bea2";
 const c2 = "#529ca0";
@@ -57,6 +64,8 @@ const Ring = ({ index, progress }: RingProps) => {
   );
 };
 
+const pd = PixelRatio.get();
+
 export const Breathe = () => {
   const { width, height } = useWindowDimensions();
   const center = useMemo(
@@ -70,54 +79,87 @@ export const Breathe = () => {
     () => [{ rotate: mix(progress.value, -Math.PI, 0) }],
     [progress]
   );
+  const img1 = useImage(require("../Transitions/assets/2.jpg"));
 
-  const canvasRef = useCanvasRef();
-
-  useEffect(() => {
-    setTimeout(() => {
-      const cc = canvasRef.current!;
-      console.log("Calling getSurface...");
-      const xx = cc.getSurface();
-      console.log("...got surface?", !!xx);
-      const bb = xx?.getCanvas();
-      console.log("...got canvas?", !!bb);
-      if (!xx || !bb) {
-        return;
-      }
-      console.log("Painting to backbuffer...");
-      const paint = Skia.Paint();
-      paint.setColor(Skia.Color("#6622bb"));
-      paint.setStyle(PaintStyle.Fill);
-      const pad = 200;
-      const xw = xx.width();
-      const xh = xx.height();
-      const ww = xw - pad * 2;
-      const hh = xh - pad * 2;
-      const rect = { x: pad, y: pad, width: ww, height: hh };
-      bb.clear(Skia.Color("#22bb77"));
-      bb.drawRect(rect, paint);
-      paint.setColor(Skia.Color("#2288bb"));
-      paint.setStyle(PaintStyle.Stroke);
-      paint.setStrokeWidth(25);
-      bb.drawLine(50, 50, xw / 2, xh / 2, paint);
-    }, 500);
-  }, [canvasRef]);
+  const unis = useDerivedValue(() => {
+    return {
+      // progress: progress.value * 0.94 + 0.03,
+      progress: 0.05,
+      resolution: [width, height],
+    };
+  });
 
   return (
-    <Canvas ref={canvasRef} style={styles.container} debug={true}>
-      <Fill color="rgb(36,43,56)" />
-      <Group origin={center} transform={transform} blendMode="screen">
-        <BlurMask style="solid" blur={40} />
-        {new Array(numRings).fill(0).map((_, index) => {
-          return <Ring key={index} index={index} progress={progress} />;
-        })}
-      </Group>
+    <Canvas style={{ flex: 1 }}>
+      <Fill>
+        <Shader source={linearMixShader} uniforms={unis}>
+          <ImageShader
+            image={null}
+            fit="cover"
+            width={width}
+            height={height}
+            // transform={[{ scale: 0.25 }]}
+          />
+          <ImageShader
+            image={img1}
+            fit="cover"
+            width={width}
+            height={height}
+            transform={transform}
+            origin={vec((pd * width) / 2, (pd * (height - 64)) / 2)}
+          />
+        </Shader>
+      </Fill>
     </Canvas>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//   },
+// });
+
+// const canvasRef = useCanvasRef();
+
+// useEffect(() => {
+//   setTimeout(() => {
+//     const cc = canvasRef.current!;
+//     console.log("Calling getSurface...");
+//     const xx = cc.getSurface();
+//     console.log("...got surface?", !!xx);
+//     const bb = xx?.getCanvas();
+//     console.log("...got canvas?", !!bb);
+//     if (!xx || !bb) {
+//       return;
+//     }
+//     console.log("Painting to backbuffer...");
+//     const paint = Skia.Paint();
+//     paint.setColor(Skia.Color("#6622bb"));
+//     paint.setStyle(PaintStyle.Fill);
+//     const pad = 200;
+//     const xw = xx.width();
+//     const xh = xx.height();
+//     const ww = xw - pad * 2;
+//     const hh = xh - pad * 2;
+//     const rect = { x: pad, y: pad, width: ww, height: hh };
+//     bb.clear(Skia.Color("#22bb77"));
+//     bb.drawRect(rect, paint);
+//     paint.setColor(Skia.Color("#2288bb"));
+//     paint.setStyle(PaintStyle.Stroke);
+//     paint.setStrokeWidth(25);
+//     bb.drawLine(50, 50, xw / 2, xh / 2, paint);
+//   }, 500);
+// }, [canvasRef]);
+
+// return (
+//   <Canvas ref={canvasRef} style={styles.container} debug={true}>
+//     <Fill color="rgb(36,43,56)" />
+//     <Group origin={center} transform={transform} blendMode="screen">
+//       <BlurMask style="solid" blur={40} />
+//       {new Array(numRings).fill(0).map((_, index) => {
+//         return <Ring key={index} index={index} progress={progress} />;
+//       })}
+//     </Group>
+//   </Canvas>
+// );

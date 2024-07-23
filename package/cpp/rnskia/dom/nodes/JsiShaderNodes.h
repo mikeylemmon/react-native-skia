@@ -91,15 +91,24 @@ public:
   void decorate(DeclarationContext *context) override {
 
     auto image = _imageProps->getImage();
+    bool isBB = false;
     if (image == nullptr) {
-      return;
+      // return;
+      auto bb = context->getBackbuffer();
+      if (bb == nullptr || !bb) {
+        return;
+      }
+      image = bb->makeImageSnapshot();
+      isBB = true;
+      // _imageProps->setImage(image);
     }
 
     auto rect = _imageProps->getRect();
     auto lm =
         _transformProp->isSet() ? _transformProp->getDerivedValue() : nullptr;
 
-    if (rect != nullptr && lm != nullptr) {
+    if (rect != nullptr && lm != nullptr && !isBB) {
+    //if (rect != nullptr && lm != nullptr) {
       auto rc = _imageProps->getDerivedValue();
       auto m3 = _imageProps->rect2rect(rc->src, rc->dst);
       if (_transformProp->isChanged() || _imageProps->isChanged()) {
@@ -118,6 +127,10 @@ public:
           _matrix.preConcat(*lm);
         }
       }
+    }
+    if (isBB) {
+      _matrix.reset();
+      _matrix.preScale(0.33333333, 0.33333333);
     }
 
     context->getShaders()->push(image->makeShader(

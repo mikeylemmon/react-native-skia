@@ -80,9 +80,14 @@ public:
   }
   bool getShowDebugOverlays() { return _showDebugOverlays; }
 
+  void setBackbuffer(sk_sp<SkSurface> backbuffer) {
+    _backbuffer = backbuffer;
+  }
+
 protected:
   std::function<void()> _requestRedraw;
   bool _showDebugOverlays;
+  sk_sp<SkSurface> _backbuffer;
 };
 
 class RNSkOffscreenCanvasProvider : public RNSkCanvasProvider {
@@ -251,6 +256,45 @@ public:
     return bb->getSurface();
   }
 
+  /**
+    Draw loop callback (backbuffered)
+   */
+  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferA;
+  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferB;
+  bool _backbufferSwap;
+  void drawLoopCallbackBB(bool invalidated) {
+    if (_redrawRequestCounter == 0 && _drawingMode != RNSkDrawingMode::Continuous) {
+      return;
+    }
+    _redrawRequestCounter = 0;
+
+    if (_backbufferA == nullptr) {
+      int sw = _canvasProvider->getScaledWidth();
+      int sh = _canvasProvider->getScaledHeight();
+      int ww = sw > 8192 ? 8192 : sw;
+      int hh = sh > 8192 ? 8192 : sh;
+      _backbufferA = std::make_shared<RNSkOffscreenCanvasProvider>(
+        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
+        ww, hh);
+      _backbufferB = std::make_shared<RNSkOffscreenCanvasProvider>(
+        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
+        ww, hh);
+    }
+    auto renderDest = _backbufferSwap ? _backbufferB : _backbufferA;
+    auto renderPrev = _backbufferSwap ? _backbufferA : _backbufferB;
+    _backbufferSwap = !_backbufferSwap;
+    _renderer->setBackbuffer(renderPrev->getSurface());
+    _renderer->renderImmediate(renderDest);
+    auto toDisplay = renderDest->getSurface(); // TODO: test performance of renderPrev vs renderDest
+    bool ok = _canvasProvider->renderToCanvas([=](SkCanvas *canvas) {
+      canvas->clear(SK_ColorTRANSPARENT);
+      toDisplay->draw(canvas, 0, 0);
+    });
+    if (!ok) {
+      requestRedraw();
+    }
+  }
+
 protected:
   std::shared_ptr<RNSkPlatformContext> getPlatformContext() {
     return _platformContext;
@@ -304,45 +348,6 @@ private:
     //   }
     // }
     drawLoopCallbackBB(invalidated);
-  }
-
-  /**
-    Draw loop callback (backbuffered)
-   */
-  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferA;
-  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferB;
-  bool _backbufferSwap;
-  void drawLoopCallbackBB(bool invalidated) {
-    if (_redrawRequestCounter == 0 && _drawingMode != RNSkDrawingMode::Continuous) {
-      return;
-    }
-    _redrawRequestCounter = 0;
-
-    if (_backbufferA == nullptr) {
-      auto sw = _canvasProvider->getScaledWidth();
-      auto sh = _canvasProvider->getScaledHeight();
-      auto ww = sw > 8192 ? 8192 : sw;
-      auto hh = sh > 8192 ? 8192 : sh;
-      _backbufferA = std::make_shared<RNSkOffscreenCanvasProvider>(
-        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
-        ww, hh);
-      _backbufferB = std::make_shared<RNSkOffscreenCanvasProvider>(
-        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
-        ww, hh);
-    }
-    auto renderDest = _backbufferSwap ? _backbufferB : _backbufferA;
-    auto renderPrev = _backbufferSwap ? _backbufferA : _backbufferB;
-    _backbufferSwap = !_backbufferSwap;
-    _renderer->renderImmediate(renderDest);
-    // _renderer->renderImmediate(_backbufferA);
-
-    // auto bb = renderDest->getSurface();
-    auto bb = renderPrev->getSurface();
-    _canvasProvider->renderToCanvas([=](SkCanvas *canvas) {
-      canvas->clear(SK_ColorTRANSPARENT);
-      bb->draw(canvas, 0, 0);
-    });
-
   }
 
   std::shared_ptr<RNSkPlatformContext> _platformContext;

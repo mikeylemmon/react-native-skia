@@ -179,7 +179,6 @@ public:
    */
   bool isSet() override { return _derivedValue != nullptr; };
 
-protected:
   /**
    Set derived value from sub classes
    */
@@ -187,6 +186,7 @@ protected:
     setIsChanged(_derivedValue != value);
     _derivedValue = value;
   }
+protected:
 
   /**
    Set derived value from sub classes
