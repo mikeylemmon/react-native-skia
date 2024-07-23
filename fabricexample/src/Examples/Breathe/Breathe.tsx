@@ -5,6 +5,7 @@ import {
   Fill,
   Group,
   mix,
+  PaintStyle,
   polar2Canvas,
   Skia,
   useCanvasRef,
@@ -70,39 +71,37 @@ export const Breathe = () => {
     [progress]
   );
 
-  // const offA = useRef(Skia.Surface.MakeOffscreen(width, height));
-  // const offB = useRef(Skia.Surface.MakeOffscreen(width, height));
-  // const ab = useRef(-1);
-  // ab.current *= -1;
-  // const off = ab.current < 0 ? offA : offB;
-  // const offShad = off.current
-  //   ?.makeImageSnapshot()
-  //   .makeShaderOptions(
-  //     TileMode.Repeat,
-  //     TileMode.Repeat,
-  //     FilterMode.Nearest,
-  //     MipmapMode.None
-  //   );
-
-  // const bufs = useMemo(() => {
-  //   const offA = Skia.Surface.MakeOffscreen(width, height)!;
-  //   const paint = Skia.Paint();
-  //   paint.setColor(Skia.Color("pink"));
-  //   const cA = offA.getCanvas();
-  //   cA.clear(Skia.Color("green"));
-  //   cA.drawRect({ x: 50, y: 50, width: 100, height: 100 }, paint);
-  //   return { offA };
-  // }, [width, height]);
-
   const canvasRef = useCanvasRef();
 
   useEffect(() => {
-    const cc = canvasRef.current!;
-    console.log("Calling getSurface...");
-    const xx = cc.getSurface();
-    console.log("...got surface?", xx);
+    setTimeout(() => {
+      const cc = canvasRef.current!;
+      console.log("Calling getSurface...");
+      const xx = cc.getSurface();
+      console.log("...got surface?", !!xx);
+      const bb = xx?.getCanvas();
+      console.log("...got canvas?", !!bb);
+      if (!xx || !bb) {
+        return;
+      }
+      console.log("Painting to backbuffer...");
+      const paint = Skia.Paint();
+      paint.setColor(Skia.Color("#6622bb"));
+      paint.setStyle(PaintStyle.Fill);
+      const pad = 200;
+      const xw = xx.width();
+      const xh = xx.height();
+      const ww = xw - pad * 2;
+      const hh = xh - pad * 2;
+      const rect = { x: pad, y: pad, width: ww, height: hh };
+      bb.clear(Skia.Color("#22bb77"));
+      bb.drawRect(rect, paint);
+      paint.setColor(Skia.Color("#2288bb"));
+      paint.setStyle(PaintStyle.Stroke);
+      paint.setStrokeWidth(25);
+      bb.drawLine(50, 50, xw / 2, xh / 2, paint);
+    }, 500);
   }, [canvasRef]);
-  // }, [bufs, canvasRef]);
 
   return (
     <Canvas ref={canvasRef} style={styles.container} debug={true}>

@@ -126,22 +126,12 @@ public:
       return jsi::Value::undefined();
     }
 
-    // if (count > 1 && !arguments[1].isUndefined() && !arguments[1].isNull()) {
-    //   auto rect = JsiSkRect::fromValue(runtime, arguments[1]);
-    //   image = view->makeImageSnapshot(rect.get());
-    // } else {
-    //   image = view->makeImageSnapshot(nullptr);
-    // }
-    // if (image == nullptr) {
-    //   throw jsi::JSError(runtime,
-    //                       "Could not create image from current surface.");
-    //   return jsi::Value::undefined();
-    // }
-    // return jsi::Object::createFromHostObject(
-    //     runtime, std::make_shared<JsiSkImage>(_platformContext, image));
-
-    RNSkLogger::logToConsole("(#%d) RNSkJsiViewApi > getSurface: TODO!", nativeId);
-    return jsi::Value::undefined();
+    sk_sp<SkSurface> bb = view->getBackbuffer();
+    if (bb == nullptr) {
+      return jsi::Value::undefined();
+    }
+    return jsi::Object::createFromHostObject(
+        runtime, std::make_shared<JsiSkSurface>(_platformContext, bb));
   }
 
   JSI_HOST_FUNCTION(makeImageSnapshot) {

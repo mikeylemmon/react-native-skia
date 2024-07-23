@@ -129,6 +129,8 @@ public:
     return true;
   };
 
+  sk_sp<SkSurface> getSurface() { return _surface; };
+
 private:
   float _width;
   float _height;
@@ -157,7 +159,7 @@ public:
            std::shared_ptr<RNSkCanvasProvider> canvasProvider,
            std::shared_ptr<RNSkRenderer> renderer)
       : _platformContext(context), _canvasProvider(canvasProvider),
-        _renderer(renderer) {}
+        _renderer(renderer), _backbufferSwap(false) {}
 
   /**
    Destructor
@@ -240,6 +242,15 @@ public:
 
   std::shared_ptr<RNSkRenderer> getRenderer() { return _renderer; }
 
+  sk_sp<SkSurface> getBackbuffer() {
+    auto bb = _backbufferSwap ? _backbufferA : _backbufferB;
+    // auto bb = _backbufferB;
+    if (bb == nullptr) {
+      return nullptr;
+    }
+    return bb->getSurface();
+  }
+
 protected:
   std::shared_ptr<RNSkPlatformContext> getPlatformContext() {
     return _platformContext;
@@ -282,16 +293,56 @@ private:
     Draw loop callback
    */
   void drawLoopCallback(bool invalidated) {
-    if (_redrawRequestCounter > 0 ||
-        _drawingMode == RNSkDrawingMode::Continuous) {
-      _redrawRequestCounter = 0;
+    // if (_redrawRequestCounter > 0 ||
+    //     _drawingMode == RNSkDrawingMode::Continuous) {
+    //   _redrawRequestCounter = 0;
+    //
+    //   if (!_renderer->tryRender(_canvasProvider)) {
+    //     // The renderer could not render cause it was busy, just schedule
+    //     // redrawing on the next frame.
+    //     requestRedraw();
+    //   }
+    // }
+    drawLoopCallbackBB(invalidated);
+  }
 
-      if (!_renderer->tryRender(_canvasProvider)) {
-        // The renderer could not render cause it was busy, just schedule
-        // redrawing on the next frame.
-        requestRedraw();
-      }
+  /**
+    Draw loop callback (backbuffered)
+   */
+  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferA;
+  std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferB;
+  bool _backbufferSwap;
+  void drawLoopCallbackBB(bool invalidated) {
+    if (_redrawRequestCounter == 0 && _drawingMode != RNSkDrawingMode::Continuous) {
+      return;
     }
+    _redrawRequestCounter = 0;
+
+    if (_backbufferA == nullptr) {
+      auto sw = _canvasProvider->getScaledWidth();
+      auto sh = _canvasProvider->getScaledHeight();
+      auto ww = sw > 8192 ? 8192 : sw;
+      auto hh = sh > 8192 ? 8192 : sh;
+      _backbufferA = std::make_shared<RNSkOffscreenCanvasProvider>(
+        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
+        ww, hh);
+      _backbufferB = std::make_shared<RNSkOffscreenCanvasProvider>(
+        getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
+        ww, hh);
+    }
+    auto renderDest = _backbufferSwap ? _backbufferB : _backbufferA;
+    auto renderPrev = _backbufferSwap ? _backbufferA : _backbufferB;
+    _backbufferSwap = !_backbufferSwap;
+    _renderer->renderImmediate(renderDest);
+    // _renderer->renderImmediate(_backbufferA);
+
+    // auto bb = renderDest->getSurface();
+    auto bb = renderPrev->getSurface();
+    _canvasProvider->renderToCanvas([=](SkCanvas *canvas) {
+      canvas->clear(SK_ColorTRANSPARENT);
+      bb->draw(canvas, 0, 0);
+    });
+
   }
 
   std::shared_ptr<RNSkPlatformContext> _platformContext;
