@@ -3,6 +3,7 @@
 #include "DerivedNodeProp.h"
 
 #include "JsiSkImage.h"
+#include "RNSkLog.h"
 
 #include <algorithm>
 #include <memory>
@@ -86,10 +87,38 @@ public:
                                              : imageRect;
     auto fit = _fitProp->isSet() ? _fitProp->value().getAsString() : "contain";
 
+//    RNSkLogger::logToConsole(
+//      "SkImageProps > updateDerivedValue: %dx%d rect=(%.1f, %.1f, %.1f, %.1f) fit=%s",
+//      image->width(), image->height(),
+//      rect.x(), rect.y(), rect.width(), rect.height(),
+//      fit.c_str()
+//    );
     setDerivedValue(fitRects(fit, imageRect, rect));
   }
 
   sk_sp<SkImage> getImage() { return _imageProp->getDerivedValue(); }
+  
+  void setImage(sk_sp<SkImage> image) {
+    setIsChanged(true);
+    if (image == nullptr) {
+      setDerivedValue(nullptr);
+      return;
+    }
+
+    auto imageRect = SkRect::MakeXYWH(0, 0, image->width(), image->height());
+
+    auto rect = _rectProp->getDerivedValue() ? *_rectProp->getDerivedValue()
+                                             : imageRect;
+    auto fit = _fitProp->isSet() ? _fitProp->value().getAsString() : "contain";
+
+//    RNSkLogger::logToConsole(
+//      "SkImageProps > setImage: %dx%d rect=(%.1f, %.1f, %.1f, %.1f) fit=%s",
+//      image->width(), image->height(),
+//      rect.x(), rect.y(), rect.width(), rect.height(),
+//      fit.c_str()
+//    );
+    setDerivedValue(fitRects(fit, imageRect, rect));
+  }
 
   std::shared_ptr<const SkRect> getRect() {
     return _rectProp->getDerivedValue();
@@ -103,6 +132,10 @@ public:
     SkMatrix m3;
     m3.preTranslate(tx, ty);
     m3.preScale(sx, sy);
+//    if (tx == 0) {
+//      RNSkLogger::logToConsole("SkImageProps > rect2rect: t=(%.3f, %.3f) s=(%.3f, %.3f)",
+//                               tx, ty, sx, sy);
+//    }
     return m3;
   }
 
@@ -118,6 +151,12 @@ private:
     auto src = inscribe(sizes.src, rect);
     auto dst = inscribe(sizes.dst, rect2);
 
+//    RNSkLogger::logToConsole(
+//      "SkImageProps > fitRects: src=(%.1f, %.1f, %.1f, %.1f) dst=(%.1f, %.1f, %.1f, %.1f) fit=%s",
+//      src.x(), src.y(), src.width(), src.height(),
+//      dst.x(), dst.y(), dst.width(), dst.height(),
+//      fit.c_str()
+//    );
     return {.src = src, .dst = dst};
   }
 

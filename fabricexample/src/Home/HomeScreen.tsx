@@ -1,9 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ScrollView } from "react-native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 
 import { HomeScreenButton } from "./HomeScreenButton";
 
 export const HomeScreen = () => {
+  const nav = useNavigation();
+  useEffect(() => {
+    nav.dispatch(
+      CommonActions.navigate({
+        name: "Breathe",
+        params: {},
+      })
+    );
+  }, [nav]);
   return (
     <ScrollView>
       <HomeScreenButton

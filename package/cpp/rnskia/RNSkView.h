@@ -8,6 +8,7 @@
 
 #include "JsiValueWrapper.h"
 #include "RNSkPlatformContext.h"
+#include "RNSkLog.h"
 
 #include "JsiSkImage.h"
 #include "JsiSkPoint.h"
@@ -164,7 +165,7 @@ public:
            std::shared_ptr<RNSkCanvasProvider> canvasProvider,
            std::shared_ptr<RNSkRenderer> renderer)
       : _platformContext(context), _canvasProvider(canvasProvider),
-        _renderer(renderer), _backbufferSwap(false) {}
+        _renderer(renderer) {}
 
   /**
    Destructor
@@ -261,7 +262,8 @@ public:
    */
   std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferA;
   std::shared_ptr<RNSkOffscreenCanvasProvider> _backbufferB;
-  bool _backbufferSwap;
+  bool _backbufferSwap = false;
+  bool _backbufferInitializing = false;
   void drawLoopCallbackBB(bool invalidated) {
     if (_redrawRequestCounter == 0 && _drawingMode != RNSkDrawingMode::Continuous) {
       return;
@@ -269,10 +271,16 @@ public:
     _redrawRequestCounter = 0;
 
     if (_backbufferA == nullptr) {
-      int sw = _canvasProvider->getScaledWidth();
-      int sh = _canvasProvider->getScaledHeight();
-      int ww = sw > 8192 ? 8192 : sw;
-      int hh = sh > 8192 ? 8192 : sh;
+      int ww = _canvasProvider->getScaledWidth();
+      int hh = _canvasProvider->getScaledHeight();
+      if (ww < 1 || hh < 1) {
+        // Not ready yet, try again next frame
+        requestRedraw();
+        return;
+      }
+      RNSkLogger::logToConsole(
+        "RNSkView > drawLoopCallbackBB: Creating backbuffers, size=(%d, %d)",
+        ww, hh);
       _backbufferA = std::make_shared<RNSkOffscreenCanvasProvider>(
         getPlatformContext(), std::bind(&RNSkView::requestRedraw, this),
         ww, hh);
@@ -286,7 +294,7 @@ public:
     _renderer->setBackbuffer(renderPrev->getSurface());
     _renderer->renderImmediate(renderDest);
     auto toDisplay = renderDest->getSurface(); // TODO: test performance of renderPrev vs renderDest
-    bool ok = _canvasProvider->renderToCanvas([=](SkCanvas *canvas) {
+    bool ok = _canvasProvider->renderToCanvas([&](SkCanvas *canvas) {
       canvas->clear(SK_ColorTRANSPARENT);
       toDisplay->draw(canvas, 0, 0);
     });
