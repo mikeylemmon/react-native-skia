@@ -1,5 +1,6 @@
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import {
+  Backbuffer,
   Canvas,
   Fill,
   ImageShader,
@@ -13,6 +14,7 @@ import { Button, PixelRatio, useWindowDimensions, View } from "react-native";
 import {
   cancelAnimation,
   Easing,
+  interpolate,
   useDerivedValue,
   useSharedValue,
   withRepeat,
@@ -21,7 +23,23 @@ import {
 
 import { frag } from "../../components/ShaderLib";
 
-const linearMixShader = frag`
+function useTimeloop(secs: number) {
+  // @refresh reset
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withRepeat(
+      withTiming(1, { duration: secs * 1000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [progress, secs]);
+  return progress;
+}
+
+const mixShader = frag`
   uniform shader image1;
   uniform shader image2;
   uniform float  progress;
@@ -40,6 +58,7 @@ const linearMixShader = frag`
 const pd = PixelRatio.get();
 
 export const Breathe = () => {
+  const img1 = useImage(require("../Transitions/assets/4.jpg"));
   const nav = useNavigation();
   const { width, height } = useWindowDimensions();
   const [cx, cy] = [width / 2, height / 2];
@@ -47,28 +66,39 @@ export const Breathe = () => {
   const [pcx, pcy] = [pd * cx, pd * cy];
   const center = useMemo(() => vec(pcx, pcy), [pcx, pcy]);
 
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    // @refresh reset
-    progress.value = withRepeat(
-      withTiming(1, { duration: 18000, easing: Easing.linear }),
-      -1,
-      false
-    );
-    return () => {
-      cancelAnimation(progress);
-    };
-  }, [progress]);
-
-  const transform = useDerivedValue(
-    () => [{ rotate: mix(progress.value, -Math.PI, Math.PI) }],
-    [progress]
-  );
-  const img1 = useImage(require("../Transitions/assets/4.jpg"));
-  const unis = useDerivedValue(() => ({
+  const mixUniforms = useDerivedValue(() => ({
     progress: 0.05,
     resolution: [pw, ph],
   }));
+
+  const progress = useTimeloop(30);
+
+  const imageXform = useDerivedValue(
+    () => [{ rotate: mix(progress.value, -Math.PI, Math.PI) }],
+    [progress]
+  );
+
+  const bbXform = useDerivedValue(
+    () => [
+      {
+        scale: interpolate(
+          Math.sin(progress.value * Math.PI),
+          [-1, 1],
+          [0.94, 0.994]
+        ),
+      },
+      {
+        rotate:
+          ((2 * Math.PI) / 3) *
+          interpolate(
+            Math.cos(progress.value * 2 * Math.PI),
+            [-1, 1],
+            [0.95, 1.04]
+          ),
+      },
+    ],
+    [progress]
+  );
 
   return (
     <>
@@ -80,21 +110,23 @@ export const Breathe = () => {
       </View>
       <Canvas style={{ flex: 1 }}>
         <Fill>
-          <Shader source={linearMixShader} uniforms={unis}>
-            <ImageShader
-              image={null}
-              fit="contain"
+          <Shader source={mixShader} uniforms={mixUniforms}>
+            <Backbuffer
               width={width}
               height={height}
-              transform={[{ scale: 1.018 }, { translateY: -10 }]}
               origin={center}
+              transform={bbXform}
+              // transform={[
+              //   { scale: 0.92 },
+              //   { rotate: ((2 * Math.PI) / 3) * 1.04 },
+              // ]}
             />
             <ImageShader
               image={img1}
               fit="cover"
               width={width}
               height={height}
-              transform={transform}
+              transform={imageXform}
               origin={center}
             />
           </Shader>

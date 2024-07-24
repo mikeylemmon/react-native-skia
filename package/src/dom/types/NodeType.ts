@@ -3,6 +3,7 @@ export const enum NodeType {
   Layer = "skLayer",
   Shader = "skShader",
   ImageShader = "skImageShader",
+  Backbuffer = "skBackbuffer",
   ColorShader = "skColorShader",
   Turbulence = "skTurbulence",
   FractalNoise = "skFractalNoise",

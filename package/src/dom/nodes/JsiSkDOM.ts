@@ -39,6 +39,7 @@ import type {
   BoxShadowProps,
   ChildrenProps,
   AtlasProps,
+  BackbufferProps,
 } from "../types";
 import type {
   BlendImageFilterProps,
@@ -117,6 +118,7 @@ import {
   RadialGradientNode,
   FractalNoiseNode,
   ColorNode,
+  BackbufferNode,
 } from "./paint/Shaders";
 import { MorphologyImageFilterNode } from "./paint/ImageFilters";
 import { GroupNode } from "./GroupNode";
@@ -361,6 +363,12 @@ export class JsiSkDOM implements SkDOM {
     return this.native
       ? global.SkiaDomApi.ImageShaderNode(props)
       : new ImageShaderNode(this.ctx, props);
+  }
+
+  Backbuffer(props: BackbufferProps) {
+    return this.native
+      ? global.SkiaDomApi.BackbufferNode(props)
+      : new BackbufferNode(this.ctx, props);
   }
 
   ColorShader(props: ColorProps) {

@@ -26,6 +26,7 @@ import type {
   MatrixColorFilterProps,
   ShaderProps,
   ImageShaderProps,
+  BackbufferProps,
   LinearGradientProps,
   GroupProps,
   PatchProps,
@@ -155,6 +156,9 @@ declare global {
     ImageShaderNode: (
       props: ImageShaderProps
     ) => DeclarationNode<ImageShaderProps>;
+    BackbufferNode: (
+      props: BackbufferProps
+    ) => DeclarationNode<BackbufferProps>;
     ColorShaderNode: (props: ColorProps) => DeclarationNode<ColorProps>;
     TurbulenceNode: (
       props: TurbulenceProps
@@ -242,6 +246,7 @@ declare global {
       // Shaders
       skShader: SkiaProps<ShaderProps>;
       skImageShader: SkiaProps<ImageShaderProps>;
+      skBackbuffer: SkiaProps<BackbufferProps>;
       skColorShader: SkiaProps<ColorProps>;
       skTurbulence: SkiaProps<TurbulenceProps>;
       skFractalNoise: SkiaProps<FractalNoiseProps>;
@@ -360,6 +365,8 @@ export const createNode = (
       return Sk.Shader(props);
     case NodeType.ImageShader:
       return Sk.ImageShader(props);
+    case NodeType.Backbuffer:
+      return Sk.Backbuffer(props);
     case NodeType.ColorShader:
       return Sk.ColorShader(props);
     case NodeType.Turbulence:

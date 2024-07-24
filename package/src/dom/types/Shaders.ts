@@ -33,6 +33,15 @@ export interface ImageShaderProps extends TransformProps, Partial<RectCtor> {
   image: SkImage | null;
 }
 
+export interface BackbufferProps extends TransformProps, Partial<RectCtor> {
+  tx: SkEnum<typeof TileMode>;
+  ty: SkEnum<typeof TileMode>;
+  fm: SkEnum<typeof FilterMode>;
+  mm: SkEnum<typeof MipmapMode>;
+  fit: Fit;
+  rect?: SkRect;
+}
+
 export interface ColorProps {
   color: Color;
 }

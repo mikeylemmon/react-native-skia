@@ -81,12 +81,11 @@ private:
   PointProp *_originProp;
 };
 
-class JsiImageShaderNode : public JsiDomDeclarationNode,
-                           public JsiDomNodeCtor<JsiImageShaderNode> {
+class JsiImageShaderNodeBase : public JsiDomDeclarationNode {
 public:
-  explicit JsiImageShaderNode(std::shared_ptr<RNSkPlatformContext> context)
-      : JsiDomDeclarationNode(context, "skImageShader",
-                              DeclarationType::Shader) {}
+  JsiImageShaderNodeBase(std::shared_ptr<RNSkPlatformContext> context,
+                         const char *subtype)
+     : JsiDomDeclarationNode(context, subtype, DeclarationType::Shader) {}
 
   void decorate(DeclarationContext *context) override {
 
@@ -156,7 +155,6 @@ protected:
     container->defineProperty<NodeProp>("image");
   }
 
-private:
   SkFilterMode getFilterModeFromString(const std::string &value) {
     if (value == "last") {
       return SkFilterMode::kLast;
@@ -193,6 +191,62 @@ private:
   TransformProp *_transformProp;
   PointProp *_originProp;
 };
+
+class JsiImageShaderNode : public JsiImageShaderNodeBase,
+                           public JsiDomNodeCtor<JsiImageShaderNode> {
+public:
+  explicit JsiImageShaderNode(std::shared_ptr<RNSkPlatformContext> context)
+    : JsiImageShaderNodeBase(context, "skImageShader") {}
+};
+
+class JsiBackbufferNode : public JsiImageShaderNodeBase,
+                          public JsiDomNodeCtor<JsiBackbufferNode> {
+public:
+  explicit JsiBackbufferNode(std::shared_ptr<RNSkPlatformContext> context)
+    : JsiImageShaderNodeBase(context, "skBackbuffer") {}
+
+  void decorate(DeclarationContext *context) override {
+    auto bb = context->getBackbuffer();
+    if (bb == nullptr) {
+      return;
+    }
+    sk_sp<SkImage> image = bb->makeImageSnapshot();
+    _imageProps->setImage(image);
+
+    auto rect = _imageProps->getRect();
+    auto lm =
+        _transformProp->isSet() ? _transformProp->getDerivedValue() : nullptr;
+
+    if (rect != nullptr && lm != nullptr) {
+      auto fr = _imageProps->getDerivedValue();
+      auto m3 = _imageProps->rect2rect(fr->src, fr->dst);
+      if (_transformProp->isChanged() || _imageProps->isChanged()) {
+        // To modify the matrix we need to copy it since we're not allowed to
+        // modify values contained in properties - this would have caused the
+        // matrix to be translated and scaled more and more for each render
+        // even thought the matrix prop did not change.
+        _matrix.reset();
+        _matrix.preConcat(m3);
+        if (_originProp->isSet()) {
+          auto tr = _originProp->getDerivedValue();
+          _matrix.preTranslate(tr->x(), tr->y());
+          _matrix.preConcat(*lm);
+          _matrix.preTranslate(-tr->x(), -tr->y());
+        } else {
+          _matrix.preConcat(*lm);
+        }
+      }
+    }
+
+    context->getShaders()->push(image->makeShader(
+        *_txProp->getDerivedValue(), *_tyProp->getDerivedValue(),
+        SkSamplingOptions(
+            getFilterModeFromString(_filterModeProp->value().getAsString()),
+            getMipmapModeFromString(_mipmapModeProp->value().getAsString())),
+        &_matrix));
+  }
+};
+
 
 class JsiColorShaderNode : public JsiDomDeclarationNode,
                            public JsiDomNodeCtor<JsiColorShaderNode> {

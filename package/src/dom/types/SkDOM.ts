@@ -43,6 +43,7 @@ import type {
   FractalNoiseProps,
   SweepGradientProps,
   ImageShaderProps,
+  BackbufferProps,
   LinearGradientProps,
   ShaderProps,
   TurbulenceProps,
@@ -138,6 +139,7 @@ export interface SkDOM {
   // Shaders
   Shader(props: ShaderProps): DeclarationNode<ShaderProps>;
   ImageShader(props: ImageShaderProps): DeclarationNode<ImageShaderProps>;
+  Backbuffer(props: BackbufferProps): DeclarationNode<BackbufferProps>;
   ColorShader(props: ColorProps): DeclarationNode<ColorProps>;
   Turbulence(props: TurbulenceProps): DeclarationNode<TurbulenceProps>;
   FractalNoise(props: FractalNoiseProps): DeclarationNode<FractalNoiseProps>;

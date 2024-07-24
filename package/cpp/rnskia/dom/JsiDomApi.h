@@ -131,6 +131,7 @@ public:
     // Shaders
     installFunction("ShaderNode", JsiShaderNode::createCtor(context));
     installFunction("ImageShaderNode", JsiImageShaderNode::createCtor(context));
+    installFunction("BackbufferNode", JsiBackbufferNode::createCtor(context));
     installFunction("ColorShaderNode", JsiColorShaderNode::createCtor(context));
     installFunction("TurbulenceNode", JsiTurbulenceNode::createCtor(context));
     installFunction("FractalNoiseNode",

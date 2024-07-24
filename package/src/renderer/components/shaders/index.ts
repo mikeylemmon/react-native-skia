@@ -2,6 +2,7 @@ export * from "./RadialGradient";
 export * from "./LinearGradient";
 export * from "./TwoPointConicalGradient";
 export * from "./SweepGradient";
+export * from "./Backbuffer";
 export * from "./Color";
 export * from "./Turbulence";
 export * from "./FractalNoise";

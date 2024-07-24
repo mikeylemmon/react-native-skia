@@ -11,6 +11,7 @@ import type {
   DeclarationContext,
   FractalNoiseProps,
   ImageShaderProps,
+  BackbufferProps,
   LinearGradientProps,
   RadialGradientProps,
   ShaderProps,
@@ -87,6 +88,45 @@ export class ImageShaderNode extends ShaderDeclaration<ImageShaderProps> {
       lm
     );
     ctx.shaders.push(shader);
+  }
+}
+
+export class BackbufferNode extends ShaderDeclaration<BackbufferProps> {
+  constructor(ctx: NodeContext, props: BackbufferProps) {
+    super(ctx, NodeType.Backbuffer, props);
+    throw new Error("Backbuffer currently unsupported in web environment");
+  }
+
+  decorate(_ctx: DeclarationContext) {
+    throw new Error("Backbuffer currently unsupported in web environment");
+    // const { fit, tx, ty, fm, mm, ...imageShaderProps } = this.props;
+    // const image = BACKBUFFER // TODO: Find out how to get a backbuffer here
+    // if (!image) {
+    //   return;
+    // }
+    // const rct = getRect(this.Skia, imageShaderProps);
+    // const m3 = this.Skia.Matrix();
+    // if (rct) {
+    //   const rects = fitRects(
+    //     fit,
+    //     { x: 0, y: 0, width: image.width(), height: image.height() },
+    //     rct
+    //   );
+    //   const [x, y, sx, sy] = rect2rect(rects.src, rects.dst);
+    //   m3.translate(x.translateX, y.translateY);
+    //   m3.scale(sx.scaleX, sy.scaleY);
+    // }
+    // const lm = this.Skia.Matrix();
+    // lm.concat(m3);
+    // processTransformProps(lm, imageShaderProps);
+    // const shader = image.makeShaderOptions(
+    //   TileMode[enumKey(tx)],
+    //   TileMode[enumKey(ty)],
+    //   FilterMode[enumKey(fm)],
+    //   MipmapMode[enumKey(mm)],
+    //   lm
+    // );
+    // ctx.shaders.push(shader);
   }
 }
 
