@@ -2,10 +2,17 @@ import { CommonActions, useNavigation } from "@react-navigation/native";
 import {
   Backbuffer,
   Canvas,
+  Circle,
+  ColorShader,
   Fill,
+  Group,
   ImageShader,
+  Mask,
   mix,
+  Paint,
+  PaintStyle,
   Shader,
+  Skia,
   useImage,
   vec,
 } from "@shopify/react-native-skia";
@@ -42,7 +49,7 @@ function useTimeloop(secs: number) {
 const mixShader = frag`
   uniform shader image1;
   uniform shader image2;
-  uniform float  progress;
+  uniform float  mixValue;
   uniform float2 resolution;
 
   half4 main(vec2 xy) {
@@ -50,26 +57,26 @@ const mixShader = frag`
     return mix(
       image1.eval(uv * resolution),
       image2.eval(uv * resolution),
-      progress
+      mixValue
     );
   }
 `;
 
+const paintShape = Skia.Paint();
+paintShape.setColor(Skia.Color("#6622aa"));
+paintShape.setStyle(PaintStyle.Stroke);
+paintShape.setStrokeWidth(8);
+
 const pd = PixelRatio.get();
 
 export const Breathe = () => {
-  const img1 = useImage(require("../Transitions/assets/4.jpg"));
+  const img = useImage(require("../Transitions/assets/1.jpg"));
   const nav = useNavigation();
   const { width, height } = useWindowDimensions();
   const [cx, cy] = [width / 2, height / 2];
   const [pw, ph] = [pd * width, pd * height];
   const [pcx, pcy] = [pd * cx, pd * cy];
   const center = useMemo(() => vec(pcx, pcy), [pcx, pcy]);
-
-  const mixUniforms = useDerivedValue(() => ({
-    progress: 0.05,
-    resolution: [pw, ph],
-  }));
 
   const progress = useTimeloop(30);
 
@@ -84,7 +91,7 @@ export const Breathe = () => {
         scale: interpolate(
           Math.sin(progress.value * Math.PI),
           [-1, 1],
-          [0.94, 0.994]
+          [0.92, 0.97]
         ),
       },
       {
@@ -93,7 +100,7 @@ export const Breathe = () => {
           interpolate(
             Math.cos(progress.value * 2 * Math.PI),
             [-1, 1],
-            [0.95, 1.04]
+            [0.95, 1.05]
           ),
       },
     ],
@@ -110,27 +117,31 @@ export const Breathe = () => {
       </View>
       <Canvas style={{ flex: 1 }}>
         <Fill>
-          <Shader source={mixShader} uniforms={mixUniforms}>
+          <Shader
+            source={mixShader}
+            uniforms={useDerivedValue(() => ({
+              mixValue: 0.03,
+              resolution: [pw, ph],
+            }))}
+          >
             <Backbuffer
               width={width}
               height={height}
               origin={center}
               transform={bbXform}
-              // transform={[
-              //   { scale: 0.92 },
-              //   { rotate: ((2 * Math.PI) / 3) * 1.04 },
-              // ]}
             />
-            <ImageShader
-              image={img1}
+            {/* <ImageShader
+              image={img}
               fit="cover"
               width={width}
               height={height}
               transform={imageXform}
               origin={center}
-            />
+            /> */}
+            <ColorShader color="#000" />
           </Shader>
         </Fill>
+        <Circle cx={cx} cy={cy - 140} r={60} paint={paintShape} />
       </Canvas>
     </>
   );
